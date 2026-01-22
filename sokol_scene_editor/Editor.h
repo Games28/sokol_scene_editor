@@ -51,7 +51,7 @@ struct Editor : SokolEngine
 {
 	bool use_gizmo = false;
 	cmn::vf3d gizmo_drag_orig;
-	const float gizmo_zxis_sz = 1.3f, gizmo_margin = 0.3f, gizmo_square_sz = 0.7f;
+	const float gizmo_axis_sz = 1.3f, gizmo_margin = 0.3f, gizmo_square_sz = 0.7f;
 	enum struct GizmoMode {
 		None,
 		XAxis,
@@ -72,6 +72,7 @@ struct Editor : SokolEngine
 	std::vector<Light> lights;
 	Object terrain;
 	Object gizmoObj;
+	std::vector<Object> objects;
 	sg_view tex_blank{};
 	sg_view tex_uv{};
 	cmn::vf3d mouse_dir, prev_mouse_dir;
@@ -116,6 +117,55 @@ struct Editor : SokolEngine
 		if (!status.valid) tex = tex_uv;
 		return tex;
 	}
+
+	void setupBillboard() {
+
+		std::vector<cmn::vf3d> coords
+		{
+			{0,0,0},
+			{0,-1,0},
+			{-1,0,0}
+		};
+
+		std::vector<cmn::vf3d> rots
+		{
+			{0,0,0},
+			{0,0,0},
+			{0,0,0}
+		};
+
+		for (int i = 0; i < coords.size(); i++)
+		{
+			Object obj;
+			Mesh& m = obj.mesh;
+			m.verts = {
+				{{-.5f, .5f, 0}, {0, 0, 1}, {0, 0}},//tl
+				{{.5f, .5f, 0}, {0, 0, 1}, {1, 0}},//tr
+				{{-.5f, -.5f, 0}, {0, 0, 1}, {0, 1}},//bl
+				{{.5f, -.5f, 0}, {0, 0, 1}, {1, 1}},//br
+
+			};
+			m.tris = {
+				{0, 2, 1},
+				{1, 2, 3},
+
+			};
+			
+
+			obj.translation = coords[i];
+			obj.rotation = rots[i];
+			obj.isbillboard = true;
+			obj.draggable = true;
+			m.updateVertexBuffer();
+			m.updateIndexBuffer();
+
+			obj.tex = makeColorTexture(0xffffffff);
+			obj.num_x = 1, obj.num_y = 1;
+			obj.num_ttl = obj.num_x * obj.num_y;
+			objects.push_back(obj);
+		}
+	}
+
 
 	void setupSampler() {
 		sg_sampler_desc sampler_desc{};
@@ -214,6 +264,7 @@ struct Editor : SokolEngine
 		setupSampler();
 		setupLights();
 		setupObjects();
+		setupBillboard();
 		setupDisplayPassAction();
 
 		setupDefaultPipeline();
@@ -309,6 +360,57 @@ struct Editor : SokolEngine
 
 #pragma region GIZMO HELPERS
 
+	void gizmoBillboardUpdates()
+	{
+		if (!use_gizmo) return;
+
+		const auto& g = gizmoObj.translation;
+		const auto& a = gizmo_axis_sz;
+		const auto& m = gizmo_margin;
+		const auto& s = gizmo_square_sz;
+
+		sg_color white = { 1, 1, 1, 1 };
+		sg_color blue = { 1, 0, 0, 1 };
+		sg_color green = { 1, 0, 1, 0 };
+		sg_color purple = { 1, 1, 0, 1 };
+
+		Parallelogram(
+			objects[0],
+			g + cmn::vf3d(m, m, 0),
+			cmn::vf3d(s, 0, 0), cmn::vf3d(0, s, 0),
+			gizmo_mode == GizmoMode::XYPlane ? white : blue
+		);
+		
+		Parallelogram(
+			objects[1],
+			g + cmn::vf3d(0, m, m),
+			cmn::vf3d(0, s, 0), cmn::vf3d(0, 0, s),
+			gizmo_mode == GizmoMode::XYPlane ? white : purple
+		);
+		
+		Parallelogram(
+			objects[2],
+			g + cmn::vf3d(m, 0, m),
+			cmn::vf3d(0, 0, s), cmn::vf3d(s, 0, 0),
+			gizmo_mode == GizmoMode::XYPlane ? white : green
+		);
+		
+	}
+
+	void Parallelogram(Object& obj,const cmn::vf3d& pos, const cmn::vf3d& a, const cmn::vf3d& b,sg_color& col)
+	{
+		cmn::vf3d x_axis = pos + a;
+		cmn::vf3d y_axis = pos + b;
+		cmn::vf3d z_axis = pos + a + b;
+
+		cmn::mat4& m = obj.model;
+		m(0, 0) = x_axis.x, m(0, 1) = y_axis.x, m(0, 2) = z_axis.x, m(0, 3) = pos.x;
+		m(1, 0) = x_axis.y, m(1, 1) = y_axis.y, m(1, 2) = z_axis.y, m(1, 3) = pos.y;
+		m(2, 0) = x_axis.z, m(2, 1) = y_axis.z, m(2, 2) = z_axis.z, m(2, 3) = pos.z;
+		m(3, 3) = 1;
+		 
+	}
+
 	void handleMouseRays()
 	{
 		prev_mouse_dir = mouse_dir;
@@ -374,7 +476,7 @@ struct Editor : SokolEngine
 	void handleGizmoDragBegin()
 	{
 		const auto& g = gizmoObj.translation;
-		const auto& a = gizmo_zxis_sz;
+		const auto& a = gizmo_axis_sz;
 		const auto& m = gizmo_margin;
 		const auto& s = gizmo_square_sz;
 
@@ -446,7 +548,7 @@ struct Editor : SokolEngine
 		else g += delta;
         
 
-		gizmoObj.updateMatrixes();
+		//gizmoObj.updateMatrixes();
 	}
 
 	void handleGizmoDragEnd()
@@ -477,16 +579,18 @@ struct Editor : SokolEngine
 		handleMouseRays();
 
 		updateCameraMatrixes();
-
+		gizmoBillboardUpdates();
 		handleGizmoUpdate();
+		
 
 		//for (auto& obj : objects)
 		//{
-		//	if (obj.isbillboard)
-		//	{
-		//		updateBillboard(obj, dt);
-		//
-		//	}
+		//	//if (obj.isbillboard)
+		//	//{
+		//	//	updateBillboard(obj, dt);
+		//	//
+		//	//}
+		//	
 		//
 		//}
 	}
@@ -581,7 +685,11 @@ struct Editor : SokolEngine
 		sg_begin_pass(pass);
 
 		renderObjects(terrain, cam.view_proj);
-		renderObjects(gizmoObj, cam.view_proj);
+		//renderObjects(gizmoObj, cam.view_proj);
+		for (auto& obj : objects)
+		{
+			renderObjects(obj, cam.view_proj);
+		}
 
 		
 
