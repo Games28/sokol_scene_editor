@@ -25,15 +25,7 @@ static cmn::vf3d polar3D(float yaw, float pitch) {
 
 
 
-struct
-{
-	cmn::vf3d pos{ 0,2,2 };
-	cmn::vf3d dir;
-	float yaw = 0;
-	float pitch = 0;
-	cmn::mat4 proj, view;
-	cmn::mat4 view_proj;
-}cam;
+
 
 struct Light
 {
@@ -49,6 +41,15 @@ static float prepDistToRay(const cmn::vf3d& pt, const cmn::vf3d& orig, const cmn
 
 struct Editor : SokolEngine
 {
+	struct
+	{
+		cmn::vf3d pos{ 0,2,2 };
+		cmn::vf3d dir;
+		float yaw = 0;
+		float pitch = 0;
+		cmn::mat4 proj, view;
+		cmn::mat4 view_proj;
+	}cam;
 	bool use_gizmo = false;
 	cmn::vf3d gizmo_drag_orig;
 	const float gizmo_axis_sz = 1.3f, gizmo_margin = 0.3f, gizmo_square_sz = 0.7f;
