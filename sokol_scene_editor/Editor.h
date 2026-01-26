@@ -140,10 +140,10 @@ struct Editor : SokolEngine
 			Object obj;
 			Mesh& m = obj.mesh;
 			m.verts = {
-				{{-.5f, .5f, 0}, {0, 0, 1}, {0, 0}},//tl
-				{{.5f, .5f, 0}, {0, 0, 1}, {1, 0}},//tr
-				{{-.5f, -.5f, 0}, {0, 0, 1}, {0, 1}},//bl
-				{{.5f, -.5f, 0}, {0, 0, 1}, {1, 1}},//br
+				{{0, 0, 0}, {0, 1, 0}, {0, 0}},//tl
+				{{1, 0, 0}, {0, 1, 0}, {1, 0}},//tr
+				{{0, 0, 1}, {0, 1, 0}, {0, 1}},//bl
+				{{1, 0, 1}, {0, 1,0}, {1, 1}},//br
 
 			};
 			m.tris = {
@@ -370,40 +370,45 @@ struct Editor : SokolEngine
 		const auto& m = gizmo_margin;
 		const auto& s = gizmo_square_sz;
 
-		sg_color white = { 1, 1, 1, 1 };
-		sg_color blue = { 1, 0, 0, 1 };
-		sg_color green = { 1, 0, 1, 0 };
-		sg_color purple = { 1, 1, 0, 1 };
+		uint32_t white = 0xffffffff;
+		uint32_t blue = 0xff0000ff;
+		uint32_t green =0xff00ff00;
+		uint32_t purple = 0xffff00ff;
 
 		Parallelogram(
 			objects[0],
 			g + cmn::vf3d(m, m, 0),
 			cmn::vf3d(s, 0, 0), cmn::vf3d(0, s, 0),
-			gizmo_mode == GizmoMode::XYPlane ? white : blue
+			 blue
 		);
 		
 		Parallelogram(
 			objects[1],
 			g + cmn::vf3d(0, m, m),
 			cmn::vf3d(0, s, 0), cmn::vf3d(0, 0, s),
-			gizmo_mode == GizmoMode::XYPlane ? white : purple
+			 purple
 		);
 		
 		Parallelogram(
 			objects[2],
 			g + cmn::vf3d(m, 0, m),
 			cmn::vf3d(0, 0, s), cmn::vf3d(s, 0, 0),
-			gizmo_mode == GizmoMode::XYPlane ? white : green
+			 green
 		);
 		
 	}
 
-	void Parallelogram(Object& obj,const cmn::vf3d& pos, const cmn::vf3d& a, const cmn::vf3d& b,sg_color& col)
+	void Parallelogram(Object& obj,const cmn::vf3d& pos, const cmn::vf3d& a, const cmn::vf3d& b,uint32_t& col)
 	{
+		
+		
 		cmn::vf3d x_axis = pos + a;
 		cmn::vf3d y_axis = pos + b;
 		cmn::vf3d z_axis = pos + a + b;
 
+		
+
+		//obj.tex = makeColorTexture(col);
 		cmn::mat4& m = obj.model;
 		m(0, 0) = x_axis.x, m(0, 1) = y_axis.x, m(0, 2) = z_axis.x, m(0, 3) = pos.x;
 		m(1, 0) = x_axis.y, m(1, 1) = y_axis.y, m(1, 2) = z_axis.y, m(1, 3) = pos.y;
@@ -501,19 +506,19 @@ struct Editor : SokolEngine
 			&u, &v);
 		if (u > 0 && v > 0 && u < 1 && v < 1) gizmo_mode = GizmoMode::XYPlane;
 
-		rayIntersectTri({ 0,0,0 }, mouse_dir,
-			rel + cmn::vf3d(0, m, m), 
-			rel + cmn::vf3d(0, m + s, m),
-			rel + cmn::vf3d(0, m, m + s),
-			&u, &v);
-		if (u > 0 && v > 0 && u < 1 && v < 1) gizmo_mode = GizmoMode::YZPlane;
-
-		rayIntersectTri({ 0,0,0 }, mouse_dir,
-			rel + cmn::vf3d(m, 0, m),
-			rel + cmn::vf3d(m, 0, m + s),
-			rel + cmn::vf3d(m + s, 0, m),
-			&u, &v);
-		if (u > 0 && v > 0 && u < 1 && v < 1) gizmo_mode = GizmoMode::ZXPlane;
+		//rayIntersectTri({ 0,0,0 }, mouse_dir,
+		//	rel + cmn::vf3d(0, m, m), 
+		//	rel + cmn::vf3d(0, m + s, m),
+		//	rel + cmn::vf3d(0, m, m + s),
+		//	&u, &v);
+		//if (u > 0 && v > 0 && u < 1 && v < 1) gizmo_mode = GizmoMode::YZPlane;
+		//
+		//rayIntersectTri({ 0,0,0 }, mouse_dir,
+		//	rel + cmn::vf3d(m, 0, m),
+		//	rel + cmn::vf3d(m, 0, m + s),
+		//	rel + cmn::vf3d(m + s, 0, m),
+		//	&u, &v);
+		//if (u > 0 && v > 0 && u < 1 && v < 1) gizmo_mode = GizmoMode::ZXPlane;
 
 		
 		
